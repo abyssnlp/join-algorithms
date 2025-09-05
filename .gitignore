@@ -19,3 +19,4 @@ htmlcov/
 .tox/
 .mypy_cache/
 .pyre/
+temp/
