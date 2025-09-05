@@ -1,7 +1,7 @@
 from typing import TypeVar
 from collections import defaultdict
 from dataclasses import astuple
-from join_algorithms.algorithms.base import BaseAlgorithm, BaseDataset
+from join_algorithms.base import BaseAlgorithm, BaseDataset
 
 T = TypeVar("T")
 U = TypeVar("U")

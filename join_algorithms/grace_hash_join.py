@@ -2,8 +2,8 @@ import os
 from typing import TypeVar, Final, Hashable
 from collections import defaultdict
 from dataclasses import astuple
-from join_algorithms.algorithms.base import BaseAlgorithm, BaseDataset
-from join_algorithms.algorithms.hash_join import HashJoinAlgorithm
+from join_algorithms.base import BaseAlgorithm, BaseDataset
+from join_algorithms.hash_join import HashJoinAlgorithm
 
 T = TypeVar("T")
 U = TypeVar("U")
