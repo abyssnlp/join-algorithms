@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "distributed-join"
+name = "join-algorithms"
 version = "0.0.1"
 description = "Distributed join algorithms in Python"
 authors = ["abyssnlp <rawatshaurya1994@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{ include = "distributed_join" }]
+packages = [{ include = "join_algorithms" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
