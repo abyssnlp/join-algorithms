@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "distributed-join"
+version = "0.0.1"
+description = "Distributed join algorithms in Python"
+authors = ["abyssnlp <rawatshaurya1994@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "distributed_join" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
