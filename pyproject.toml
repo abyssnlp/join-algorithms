@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "join-algorithms"
 version = "0.0.1"
-description = "Distributed join algorithms in Python"
+description = "Join algorithms in Python"
 authors = ["abyssnlp <rawatshaurya1994@gmail.com>"]
 license = "MIT"
 readme = "README.md"
