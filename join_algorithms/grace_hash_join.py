@@ -1,14 +1,17 @@
 import os
-from typing import TypeVar, Final, Hashable
-from collections import defaultdict
+from typing import TypeVar, Final, Hashable, ClassVar, Any, Dict, Protocol
 from dataclasses import astuple
 from join_algorithms.base import BaseAlgorithm, BaseDataset
 from join_algorithms.hash_join import HashJoinAlgorithm
 
-T = TypeVar("T")
-U = TypeVar("U")
-V = TypeVar("V")
-PartitionKey = TypeVar("PartitionKey", bound=Hashable)
+
+class DataClassProtocol(Protocol):
+    __dataclass_fields__: ClassVar[Dict[str, Any]]
+
+
+T = TypeVar("T", bound=DataClassProtocol)
+U = TypeVar("U", bound=DataClassProtocol)
+V = TypeVar("V", bound=DataClassProtocol)
 
 
 class GraceHashJoinAlgorithm(BaseAlgorithm[T, U, V]):
@@ -22,7 +25,7 @@ class GraceHashJoinAlgorithm(BaseAlgorithm[T, U, V]):
         os.makedirs(self.TMP_DIR, exist_ok=True)
         self._result_type = self._extract_result_type()
 
-    def _hash_function(self, key: PartitionKey) -> int:
+    def _hash_function(self, key: Hashable) -> int:
         return hash(key) % self.NUM_PARTITIONS
 
     def _partition_datasets(
@@ -62,6 +65,8 @@ class GraceHashJoinAlgorithm(BaseAlgorithm[T, U, V]):
         build_key_idx: int,
         probe_key_idx: int,
     ) -> BaseDataset[V]:
+        partition_files1 = []
+        partition_files2 = []
         try:
             partition_files1, partition_files2 = self._partition_datasets(
                 dataset1, dataset2, build_key_idx, probe_key_idx
@@ -100,17 +105,17 @@ if __name__ == "__main__":
 
     @dataclass(slots=True, frozen=True)
     class A:
-        id: int
+        id: Any
         name: str
 
     @dataclass(slots=True, frozen=True)
     class B:
-        id: int
+        id: Any
         value: float
 
     @dataclass(slots=True, frozen=True)
     class C:
-        id: int
+        id: Any
         name: str
         value: float
 

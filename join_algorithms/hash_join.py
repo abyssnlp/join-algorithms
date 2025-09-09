@@ -1,11 +1,16 @@
-from typing import TypeVar
+from typing import TypeVar, ClassVar, Any, Dict, Protocol
 from collections import defaultdict
 from dataclasses import astuple
 from join_algorithms.base import BaseAlgorithm, BaseDataset
 
-T = TypeVar("T")
-U = TypeVar("U")
-V = TypeVar("V")
+
+class DataClassProtocol(Protocol):
+    __dataclass_fields__: ClassVar[Dict[str, Any]]
+
+
+T = TypeVar("T", bound=DataClassProtocol)
+U = TypeVar("U", bound=DataClassProtocol)
+V = TypeVar("V", bound=DataClassProtocol)
 
 
 class HashJoinAlgorithm(BaseAlgorithm[T, U, V]):
@@ -38,7 +43,7 @@ class HashJoinAlgorithm(BaseAlgorithm[T, U, V]):
                     combined_tuple = self._combine_rows(match_row, row, probe_key_idx)
 
                     if self._result_type:
-                        result_obj = self._result_type(*combined_tuple)
+                        result_obj = self._result_type(combined_tuple)
                     else:
                         result_obj = combined_tuple
                     joined_rows.append(result_obj)

@@ -2,14 +2,19 @@ import os
 import heapq
 import pickle
 import uuid
-from typing import TypeVar, Final, List, Iterator
+from typing import TypeVar, Final, List, Iterator, ClassVar, Any, Dict, Protocol
 from dataclasses import astuple
 from join_algorithms.base import BaseAlgorithm, BaseDataset
 from join_algorithms.sort_merge_join import SortMergeJoinAlgorithm
 
-T = TypeVar("T")
-U = TypeVar("U")
-V = TypeVar("V")
+
+class DataClassProtocol(Protocol):
+    __dataclass_fields__: ClassVar[Dict[str, Any]]
+
+
+T = TypeVar("T", bound=DataClassProtocol)
+U = TypeVar("U", bound=DataClassProtocol)
+V = TypeVar("V", bound=DataClassProtocol)
 
 
 class ExternalSortMergeAlgorithm(BaseAlgorithm[T, U, V]):
@@ -33,15 +38,13 @@ class ExternalSortMergeAlgorithm(BaseAlgorithm[T, U, V]):
             pickle.dump(rows, f)
         return temp_file
 
-    def _read_sorted_run(self, file_path: str) -> Iterator[T | U]:
+    def _read_sorted_run(self, file_path: str) -> Iterator[Any]:
         with open(file_path, "rb") as f:
             rows = pickle.load(f)
             for row in rows:
                 yield row
 
-    def _merge_sorted_runs(
-        self, temp_files: List[str], key_idx: int
-    ) -> Iterator[T | U]:
+    def _merge_sorted_runs(self, temp_files: List[str], key_idx: int) -> Iterator[Any]:
         if not temp_files:
             return iter([])
 
@@ -103,8 +106,8 @@ class ExternalSortMergeAlgorithm(BaseAlgorithm[T, U, V]):
             # ideally we'd use iterators throughout, but the sort-merge join implementation
             # expects BaseDataset inputs, so we convert the iterators to lists here.
             return self.sort_merge_joiner.join(
-                BaseDataset[T](rows=list(sorted_dataset1)),
-                BaseDataset[U](rows=list(sorted_dataset2)),
+                BaseDataset[T](rows=list(sorted_dataset1)),  # type: ignore
+                BaseDataset[U](rows=list(sorted_dataset2)),  # type: ignore
                 build_key_idx,
                 probe_key_idx,
             )

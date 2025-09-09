@@ -1,10 +1,15 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, astuple
-from typing import Generic, TypeVar, Sequence, get_args
+from typing import Generic, TypeVar, Sequence, get_args, ClassVar, Any, Dict, Protocol
 
-T = TypeVar("T")
-U = TypeVar("U")
-V = TypeVar("V")
+
+class DataClassProtocol(Protocol):
+    __dataclass_fields__: ClassVar[Dict[str, Any]]
+
+
+T = TypeVar("T", bound=DataClassProtocol)
+U = TypeVar("U", bound=DataClassProtocol)
+V = TypeVar("V", bound=DataClassProtocol)
 
 
 @dataclass(frozen=True)
@@ -54,7 +59,7 @@ class BaseAlgorithm(ABC, Generic[T, U, V]):
         """
         pass
 
-    def _combine_rows(self, row1: T, row2: U, probe_key_idx: int) -> V:
+    def _combine_rows(self, row1: T, row2: U, probe_key_idx: int) -> tuple:
         row1_tuple = astuple(row1)
         row2_tuple = astuple(row2)
         row2_without_key = row2_tuple[:probe_key_idx] + row2_tuple[probe_key_idx + 1 :]
