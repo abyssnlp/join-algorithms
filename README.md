@@ -8,6 +8,7 @@ The implemented join algorithms include:
 - Hash Join
 - Sort-Merge Join
 - Grace Hash Join
+- Parallel Hash Join
 - External Sort-Merge Join
 
 Feel free to explore the code, run the examples, and modify them to better understand how these algorithms work!
