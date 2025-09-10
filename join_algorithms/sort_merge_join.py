@@ -73,10 +73,7 @@ class SortMergeJoinAlgorithm(BaseAlgorithm[T, U, V]):
                         row2 = sorted_dataset2[row2_idx]
 
                         combined_tuple = self._combine_rows(row1, row2, probe_key_idx)
-                        if self._result_type:
-                            result_obj = self._result_type(combined_tuple)
-                        else:
-                            result_obj = combined_tuple
+                        result_obj = self._create_result_object(combined_tuple)
                         joined_rows.append(result_obj)
 
         return BaseDataset[V](rows=joined_rows)

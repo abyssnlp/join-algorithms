@@ -1,6 +1,17 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, astuple
-from typing import Generic, TypeVar, Sequence, get_args, ClassVar, Any, Dict, Protocol
+from typing import (
+    Generic,
+    TypeVar,
+    Sequence,
+    get_args,
+    ClassVar,
+    Any,
+    Dict,
+    Protocol,
+    get_origin,
+    Optional,
+)
 
 
 class DataClassProtocol(Protocol):
@@ -26,16 +37,46 @@ class BaseDataset(Generic[T]):
 class BaseAlgorithm(ABC, Generic[T, U, V]):
     algorithm_name: str
 
+    def __init__(self) -> None:
+        self._result_type: Optional[type] = None
+
+    @classmethod
+    def __class_getitem__(cls, params):
+        class ParameterizedAlgorithm(cls):
+            _type_params = params if isinstance(params, tuple) else (params,)
+
+            def __init__(self) -> None:
+                super().__init__()
+                if len(self._type_params) >= 3:
+                    self._result_type = self._type_params[2]
+
+        return ParameterizedAlgorithm
+
     def _extract_result_type(self):
         """
         Extract the result type V from the generic parameters.
         """
-        origin = getattr(self, "__orig_class__", None)
-        if origin is not None:
+
+        if hasattr(self, "_type_params") and len(getattr(self, "_type_params")) >= 3:
+            return getattr(self, "_type_params")[2]
+
+        if hasattr(self, "__orig_class__"):
+            origin = getattr(self, "__orig_class__")
             args = get_args(origin)
             if len(args) >= 3:
                 return args[2]
+
+        for base in getattr(self.__class__, "__orig_bases__", []):
+            if get_origin(base) is BaseAlgorithm:
+                args = get_args(base)
+                if len(args) >= 3:
+                    return args[2]
+
         return None
+
+    def _set_result_type(self):
+        if self._result_type is None:
+            self._result_type = self._extract_result_type()
 
     @abstractmethod
     def join(
@@ -64,3 +105,15 @@ class BaseAlgorithm(ABC, Generic[T, U, V]):
         row2_tuple = astuple(row2)
         row2_without_key = row2_tuple[:probe_key_idx] + row2_tuple[probe_key_idx + 1 :]
         return row1_tuple + row2_without_key
+
+    def _create_result_object(self, combined_tuple: tuple) -> V:
+        self._set_result_type()
+
+        if self._result_type and not isinstance(self._result_type, TypeVar):
+            try:
+                return self._result_type(*combined_tuple)
+            except TypeError as e:
+                raise TypeError(
+                    f"Error creating result object of type {self._result_type} with data {combined_tuple}: {e}"
+                ) from e
+        return combined_tuple  # type: ignore

@@ -1,8 +1,9 @@
-import multiprocessing as mp
-from typing import TypeVar, Final, ClassVar, Hashable, Any, Dict, Protocol
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import TypeVar, Final, ClassVar, Any, Dict, Protocol
 from dataclasses import astuple
 from join_algorithms.base import BaseAlgorithm, BaseDataset
 from join_algorithms.hash_join import HashJoinAlgorithm
+from join_algorithms.config import DEFAULT_CONFIG
 
 
 class DataClassProtocol(Protocol):
@@ -15,12 +16,11 @@ V = TypeVar("V", bound=DataClassProtocol)
 
 
 class ParallelHashJoinAlgorithm(BaseAlgorithm[T, U, V]):
-    NUM_WORKERS: Final[int] = max(1, mp.cpu_count() - 1)
+    NUM_WORKERS: Final[int] = DEFAULT_CONFIG.PARALLEL_WORKERS
     algorithm_name = "Parallel Hash Join"
 
     def __init__(self) -> None:
         super().__init__()
-        self.hash_joiner = HashJoinAlgorithm[T, U, V]()
 
     def _worker_join(
         self,
@@ -36,6 +36,13 @@ class ParallelHashJoinAlgorithm(BaseAlgorithm[T, U, V]):
         If we pre-partition, we scan and send only relevant partitions to each worker.
         """
         a_partition, b_partition = [], []
+        if hasattr(self, "_type_params") and len(getattr(self, "_type_params")) >= 3:
+            params = getattr(self, "_type_params")
+            hash_joiner_class = HashJoinAlgorithm[params[0], params[1], params[2]]
+            hash_joiner = hash_joiner_class()
+        else:
+            hash_joiner = HashJoinAlgorithm()
+            hash_joiner._result_type = self._result_type
 
         for row in dataset1:
             if hash(astuple(row)[build_key_idx]) % self.NUM_WORKERS == worker_id:
@@ -51,7 +58,7 @@ class ParallelHashJoinAlgorithm(BaseAlgorithm[T, U, V]):
 
         a_dataset = BaseDataset[T](rows=a_partition)
         b_dataset = BaseDataset[U](rows=b_partition)
-        return self.hash_joiner.join(a_dataset, b_dataset, build_key_idx, probe_key_idx)
+        return hash_joiner.join(a_dataset, b_dataset, build_key_idx, probe_key_idx)
 
     def join(
         self,
@@ -60,17 +67,27 @@ class ParallelHashJoinAlgorithm(BaseAlgorithm[T, U, V]):
         build_key_idx: int,
         probe_key_idx: int,
     ) -> BaseDataset[V]:
+        joined_rows = []
 
-        with mp.Pool(processes=self.NUM_WORKERS) as pool:
-            args = [
-                (worker_id, dataset1, dataset2, build_key_idx, probe_key_idx)
+        with ThreadPoolExecutor(max_workers=self.NUM_WORKERS) as executor:
+            futures = [
+                executor.submit(
+                    self._worker_join,
+                    worker_id,
+                    dataset1,
+                    dataset2,
+                    build_key_idx,
+                    probe_key_idx,
+                )
                 for worker_id in range(self.NUM_WORKERS)
             ]
-            results = pool.starmap(self._worker_join, args)
-
-        joined_rows = []
-        for result in results:
-            joined_rows.extend(result.rows)
+            for future in as_completed(futures):
+                try:
+                    worker_result = future.result()
+                    joined_rows.extend(worker_result.rows)
+                except Exception as e:
+                    print(f"Worker encountered an error: {e}")
+                    raise
 
         print("Sample joined rows:")
         print("\n".join(map(str, joined_rows[:10])))
@@ -103,4 +120,5 @@ if __name__ == "__main__":
     result_dataset = parallel_hash_join.join(
         dataset1, dataset2, build_key_idx=0, probe_key_idx=0
     )
+    print(result_dataset)
     print(f"Joined {len(result_dataset.rows)} rows.")

@@ -5,6 +5,7 @@ import uuid
 from typing import TypeVar, Final, List, Iterator, ClassVar, Any, Dict, Protocol
 from dataclasses import astuple
 from join_algorithms.base import BaseAlgorithm, BaseDataset
+from join_algorithms.config import DEFAULT_CONFIG
 from join_algorithms.sort_merge_join import SortMergeJoinAlgorithm
 
 
@@ -18,14 +19,13 @@ V = TypeVar("V", bound=DataClassProtocol)
 
 
 class ExternalSortMergeAlgorithm(BaseAlgorithm[T, U, V]):
-    MEMORY_LIMIT: Final[int] = 10  # number of rows to hold in-memory
-    TMP_DIR: Final[str] = os.path.join(os.getcwd(), "temp")
+    MEMORY_LIMIT: Final[int] = DEFAULT_CONFIG.EXTERNAL_SORT_MEMORY_LIMIT
+    TMP_DIR: Final[str] = DEFAULT_CONFIG.TEMP_DIR
     algorithm_name = "External Sort-Merge Join"
 
     def __init__(self):
         super().__init__()
         self._result_type = self._extract_result_type()
-        self.sort_merge_joiner = SortMergeJoinAlgorithm[T, U, V]()
         self.temp_files = []
 
     def _write_sorted_run(self, rows: list) -> str:
@@ -97,6 +97,15 @@ class ExternalSortMergeAlgorithm(BaseAlgorithm[T, U, V]):
         build_key_idx: int,
         probe_key_idx: int,
     ) -> BaseDataset[V]:
+        if hasattr(self, "_type_params") and len(getattr(self, "_type_params")) >= 3:
+            params = getattr(self, "_type_params")
+            sort_merge_joiner_class = SortMergeJoinAlgorithm[
+                params[0], params[1], params[2]
+            ]
+            sort_merge_joiner = sort_merge_joiner_class()
+        else:
+            sort_merge_joiner = SortMergeJoinAlgorithm()
+            sort_merge_joiner._result_type = self._result_type
         try:
             temp_files1 = self._external_sort(dataset1, build_key_idx)
             temp_files2 = self._external_sort(dataset2, probe_key_idx)
@@ -105,7 +114,7 @@ class ExternalSortMergeAlgorithm(BaseAlgorithm[T, U, V]):
 
             # ideally we'd use iterators throughout, but the sort-merge join implementation
             # expects BaseDataset inputs, so we convert the iterators to lists here.
-            return self.sort_merge_joiner.join(
+            return sort_merge_joiner.join(
                 BaseDataset[T](rows=list(sorted_dataset1)),  # type: ignore
                 BaseDataset[U](rows=list(sorted_dataset2)),  # type: ignore
                 build_key_idx,

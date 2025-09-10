@@ -3,6 +3,7 @@ from typing import TypeVar, Final, Hashable, ClassVar, Any, Dict, Protocol
 from dataclasses import astuple
 from join_algorithms.base import BaseAlgorithm, BaseDataset
 from join_algorithms.hash_join import HashJoinAlgorithm
+from join_algorithms.config import DEFAULT_CONFIG
 
 
 class DataClassProtocol(Protocol):
@@ -15,15 +16,13 @@ V = TypeVar("V", bound=DataClassProtocol)
 
 
 class GraceHashJoinAlgorithm(BaseAlgorithm[T, U, V]):
-    NUM_PARTITIONS: Final[int] = 5
-    TMP_DIR: Final[str] = os.path.join(os.getcwd(), "temp")
+    NUM_PARTITIONS: Final[int] = DEFAULT_CONFIG.GRACE_HASH_PARTITIONS
+    TMP_DIR: Final[str] = DEFAULT_CONFIG.TEMP_DIR
     algorithm_name = "Grace Hash Join"
 
     def __init__(self):
         super().__init__()
-        self.hash_joiner = HashJoinAlgorithm[T, U, V]()
         os.makedirs(self.TMP_DIR, exist_ok=True)
-        self._result_type = self._extract_result_type()
 
     def _hash_function(self, key: Hashable) -> int:
         return hash(key) % self.NUM_PARTITIONS
@@ -67,6 +66,14 @@ class GraceHashJoinAlgorithm(BaseAlgorithm[T, U, V]):
     ) -> BaseDataset[V]:
         partition_files1 = []
         partition_files2 = []
+        if hasattr(self, "_type_params") and len(getattr(self, "_type_params")) >= 3:
+            params = getattr(self, "_type_params")
+            hash_joiner_class = HashJoinAlgorithm[params[0], params[1], params[2]]
+            hash_joiner = hash_joiner_class()
+        else:
+            hash_joiner = HashJoinAlgorithm()
+            hash_joiner._result_type = self._result_type
+
         try:
             partition_files1, partition_files2 = self._partition_datasets(
                 dataset1, dataset2, build_key_idx, probe_key_idx
@@ -82,7 +89,7 @@ class GraceHashJoinAlgorithm(BaseAlgorithm[T, U, V]):
                 build_side = [eval(row.strip()) for row in partition_files1[i]]
                 probe_side = [eval(row.strip()) for row in partition_files2[i]]
 
-                partial_joined = self.hash_joiner.join(
+                partial_joined = hash_joiner.join(
                     BaseDataset[T](rows=build_side),
                     BaseDataset[U](rows=probe_side),
                     build_key_idx,

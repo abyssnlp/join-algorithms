@@ -9,6 +9,7 @@ packages = [{ include = "join_algorithms" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+pytest = "^8.4.2"
 
 
 [build-system]

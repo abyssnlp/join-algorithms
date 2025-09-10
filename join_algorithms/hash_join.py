@@ -20,6 +20,9 @@ class HashJoinAlgorithm(BaseAlgorithm[T, U, V]):
         super().__init__()
         self.hash_table = defaultdict(list)
         self._result_type = self._extract_result_type()
+        print(
+            f"Initialized {self.algorithm_name} with result type: {self._result_type}"
+        )
 
     def join(
         self,
@@ -41,11 +44,7 @@ class HashJoinAlgorithm(BaseAlgorithm[T, U, V]):
             if key in self.hash_table:
                 for match_row in self.hash_table[key]:
                     combined_tuple = self._combine_rows(match_row, row, probe_key_idx)
-
-                    if self._result_type:
-                        result_obj = self._result_type(combined_tuple)
-                    else:
-                        result_obj = combined_tuple
+                    result_obj = self._create_result_object(combined_tuple)
                     joined_rows.append(result_obj)
 
         return BaseDataset[V](rows=joined_rows)
