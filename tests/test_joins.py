@@ -2,8 +2,6 @@ import pytest
 from dataclasses import dataclass
 from join_algorithms.hash_join import HashJoinAlgorithm
 from join_algorithms.sort_merge_join import SortMergeJoinAlgorithm
-from join_algorithms.external_sort_merge_join import ExternalSortMergeAlgorithm
-from join_algorithms.grace_hash_join import GraceHashJoinAlgorithm
 from join_algorithms.parallel_hash_join import ParallelHashJoinAlgorithm
 
 from join_algorithms.base import BaseDataset
